@@ -20,6 +20,8 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@coinbase/cdp-sdk": "^1.38.6"
   }
 }
-

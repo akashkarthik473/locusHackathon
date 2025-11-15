@@ -22,6 +22,10 @@
     "node": ">=18.18.0"
   },
   "dependencies": {
-    "@coinbase/cdp-sdk": "^1.38.6"
+    "@coinbase/cdp-sdk": "^1.38.6",
+    "@coinbase/x402": "^0.7.1",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "node-fetch": "^3.3.2"
   }
 }

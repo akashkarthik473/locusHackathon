@@ -1,47 +1,47 @@
 #!/usr/bin/env node
-import { authorizeSpend, fetchAudit } from './locusClient.js';
+import { X402Buyer } from '@coinbase/x402';
 
 const API_URL = process.env.JOKE_API_URL ?? 'http://localhost:3000/joke';
 const userPrompt = process.argv.slice(2).join(' ') || 'tell me a joke';
 
 async function main() {
   console.log(`🤖 Agent: requesting joke for "${userPrompt}"`);
+
+  // First attempt — expect 402
   const firstTry = await fetchJoke();
   if (firstTry.status === 200) {
     const body = await firstTry.json();
-    return printSuccess(body, null);
+    return printSuccess(body);
   }
   if (firstTry.status !== 402) {
     const errorBody = await safeJson(firstTry);
     throw new Error(`Unexpected response: ${firstTry.status} ${JSON.stringify(errorBody)}`);
   }
 
+  // Parse 402 payment requirement
   const paymentRequirement = await firstTry.json();
   console.log('💸 Payment required:', paymentRequirement.price);
 
-  const approval = await authorizeSpend({
-    vendor: paymentRequirement?.seller?.id ?? 'demo.seller',
-    amount: paymentRequirement?.price?.amount ?? '0.01',
-    currency: paymentRequirement?.price?.currency ?? 'USDC',
-    memo: userPrompt,
-    invoiceNonce: paymentRequirement?.invoice_nonce
+  // Create X402 Buyer tied to your CDP wallet
+  const buyer = new X402Buyer({
+    walletId: process.env.CDP_WALLET_ID,             // note: lowercase "Id"
+    walletPrivateKey: process.env.CDP_WALLET_PRIVATE_KEY,
+    facilitatorUrl: process.env.FACILITATOR_URL,
   });
 
-  if (!approval?.paymentHeader) {
-    throw new Error('Locus approval did not return an X-PAYMENT header');
-  }
+  // Pay the 402 challenge
+  const paymentHeader = await buyer.pay(paymentRequirement);
 
-  const paidResponse = await fetchJoke(approval.paymentHeader);
+  // Retry with X-PAYMENT header
+  const paidResponse = await fetchJoke(paymentHeader);
+
   if (paidResponse.status !== 200) {
     const body = await safeJson(paidResponse);
-    throw new Error(
-      `Payment attempt failed (${paidResponse.status}). Response: ${JSON.stringify(body)}`
-    );
+    throw new Error(`Payment attempt failed (${paidResponse.status}): ${JSON.stringify(body)}`);
   }
 
   const jokeBody = await paidResponse.json();
-  const audit = approval.auditId ? await fetchAudit(approval.auditId) : null;
-  printSuccess(jokeBody, audit ?? jokeBody.audit ?? null);
+  printSuccess(jokeBody);
 }
 
 main().catch((err) => {
@@ -52,9 +52,7 @@ main().catch((err) => {
 async function fetchJoke(paymentHeader) {
   return fetch(API_URL, {
     method: 'GET',
-    headers: {
-      ...(paymentHeader ? { 'X-PAYMENT': paymentHeader } : {})
-    }
+    headers: paymentHeader ? { 'X-PAYMENT': paymentHeader } : {},
   });
 }
 
@@ -66,16 +64,11 @@ async function safeJson(response) {
   }
 }
 
-function printSuccess(body, audit) {
+function printSuccess(body) {
   console.log('\n🤣 Joke:', body.joke);
-  if (audit) {
+  if (body.audit) {
     console.log(
-      `🧾 spent: ${audit.spent ?? body.audit?.spent} ${audit.currency ?? body.audit?.currency} | tx: ${
-        audit.tx ?? audit.auditId ?? 'mock'
-      } | policy: ${audit.policy ?? 'n/a'} | vendor: ${
-        audit.vendor ?? body.audit?.vendor ?? 'demo.seller'
-      }`
+      `🧾 spent: ${body.audit.spent} ${body.audit.currency} | tx: ${body.audit.tx} | vendor: ${body.audit.vendor}`
     );
   }
 }
-

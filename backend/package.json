@@ -1,0 +1,25 @@
+{
+  "name": "paid-joke-agent",
+  "version": "0.1.0",
+  "description": "Locus + x402 demo backend (paid /joke API plus sample agent).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "agent": "node agent/agent.js \"tell me a joke\""
+  },
+  "keywords": [
+    "locus",
+    "x402",
+    "coinbase",
+    "demo",
+    "joke"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
+

@@ -1,0 +1,10 @@
+{
+  "agent": "joke-agent",
+  "vendor_allowlist": [
+    "https://localhost:3000/joke"
+  ],
+  "per_call_cap_usd": 0.05,
+  "daily_cap_usd": 1.0,
+  "notes": "Copy this into Locus when creating the policy. Update the vendor URL when you deploy the seller."
+}
+

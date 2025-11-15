@@ -1,18 +1,19 @@
-# x402 Joke Endpoint (testnet)
+# 1¢ Joke Agent
 
-## Setup
-1. `npm i`
-2. `cp .env.example .env` and fill:
-   - RECEIVER_ADDRESS = your EVM wallet to receive funds
-   - PRIVATE_KEY      = test wallet key for the buyer helper
-   - NETWORK          = base-sepolia
-   - FACILITATOR_URL  = https://x402.org/facilitator
+This repository now has two pieces:
 
-## Run
-- `npm start`
+1. `backend/` – dependency-free Node backend that exposes a 1¢ `/joke` endpoint (HTTP 402 until paid) plus a buyer/agent script that shows the Locus → x402 payment loop.
+2. `frontend/` – the existing Vite playground if you want to surface the joke agent in a UI.
 
-## Test
-- Unpaid 402: `curl -i http://localhost:3000/joke`
-- Paid via helper: `curl http://localhost:3000/buy/joke`
+## Quick start (backend)
+```bash
+cd backend
+cp env.sample .env          # optional; tweak price/policy/facilitator
+node src/server.js          # starts http://localhost:3000/joke
+node agent/agent.js "tell me a joke"
+```
 
-Deploy this server anywhere (Render/Railway/another Repl). Point your Replit front-end at `/buy/joke`.
+You can still `curl -i http://localhost:3000/joke` to see the raw 402 payload. Wire the facilitator + Locus calls per `backend/README.md` once you have credentials.
+
+## Frontend
+Inside `frontend/` you can continue to iterate on UI/UX. Run `npm install && npm run dev` from that folder and point it at the backend server.

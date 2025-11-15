@@ -1,4 +1,5 @@
 id,status,title,description,allowed_files,allowed_deps,tests
 BUG-1,open,"Wire facilitator to Coinbase","Replace the mock verify/settle stubs with real HTTP calls to the Coinbase x402 facilitator while keeping mocks available via env flags.","backend/src/facilitatorClient.js|backend/src/server.js","none","node backend/src/server.js; curl -i http://localhost:3000/joke; node backend/agent/agent.js \"tell me a joke\""
 BUG-2,open,"Align frontend with paid API","Point the Vite UI at GET http://localhost:3000/joke, surface the 402 requirement, and display the paid joke/audit result so users can run the flow from the browser.","frontend/src/App.jsx|frontend/src/main.jsx|frontend/src/index.css","none","npm --prefix frontend run dev; exercise paid flow in browser"
+BUG-3,in_review,"Agent error: Cannot read properties of undefined","Investigate and fix the error in agent.js where 'Cannot read properties of undefined (reading slice)' occurs. Ensure environment variables are correctly set and debug the agent flow.","backend/agent/agent.js|backend/.env","none","node backend/agent/agent.js \"tell me a joke\""
 

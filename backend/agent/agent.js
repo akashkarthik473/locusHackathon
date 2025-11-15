@@ -15,7 +15,7 @@ const account = toAccount(cdpAccount);
 
 const fetchWithPayment = wrapFetchWithPayment(fetch, account);
 
-fetchWithPayment(url, {
+fetchWithPayment('http://localhost:3000/joke', {
   method: 'GET',
 })
 .then(async response => {

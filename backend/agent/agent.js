@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { createWalletClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
-import {baseSepolia} from 'viem/chains';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+dotenv.config();
 
 const API_URL = process.env.JOKE_API_URL ?? 'http://localhost:3000/joke';
 const userPrompt = process.argv.slice(2).join(' ') || 'tell me a joke';
@@ -11,7 +12,7 @@ const userPrompt = process.argv.slice(2).join(' ') || 'tell me a joke';
 async function main() {
   console.log(`🤖 Agent: requesting joke for "${userPrompt}"`);
 
-  // First attempt — expect 402
+  // 1️⃣ First request — expect HTTP 402 Payment Required
   const firstTry = await fetchJoke();
   if (firstTry.status === 200) {
     const body = await firstTry.json();
@@ -22,9 +23,11 @@ async function main() {
     throw new Error(`Unexpected response: ${firstTry.status} ${JSON.stringify(errorBody)}`);
   }
 
+  // 2️⃣ Parse payment requirement challenge
   const challenge = await firstTry.json();
-  console.log('Payment required:', challenge.price);
+  console.log('💸 Payment required:', challenge.price);
 
+  // 3️⃣ Set up wallet client (CDP or any EOA private key)
   const account = privateKeyToAccount(process.env.CDP_WALLET_PRIVATE_KEY);
   const walletClient = createWalletClient({
     account,
@@ -32,22 +35,35 @@ async function main() {
     transport: http(),
   });
 
-  // Parse 402 payment requirement
-  const paymentRequirement = await firstTry.json();
-  console.log('💸 Payment required:', paymentRequirement.price);
+  // 4️⃣ Construct payment payload per x402 “payment_proof” format
+  const message = {
+    invoice_nonce: challenge.invoice_nonce,
+    facilitator: challenge.facilitator.url,
+    amount: challenge.price.amount,
+    currency: challenge.price.currency,
+    pay_to: challenge.facilitator.pay_to,
+    memo: userPrompt,
+  };
 
-  // Create X402 Buyer tied to your CDP wallet
-  const buyer = new X402Buyer({
-    walletId: process.env.CDP_WALLET_ID,             // note: lowercase "Id"
-    walletPrivateKey: process.env.CDP_WALLET_PRIVATE_KEY,
-    facilitatorUrl: process.env.FACILITATOR_URL,
+  const signature = await walletClient.signMessage({
+    account,
+    message: JSON.stringify(message),
   });
 
-  // Pay the 402 challenge
-  const paymentHeader = await buyer.pay(paymentRequirement);
+  // Helper for encoding Base64 (no external utils)
+  function encodeBase64(obj) {
+    return Buffer.from(JSON.stringify(obj)).toString('base64');
+  }
 
-  // Retry with X-PAYMENT header
-  const paidResponse = await fetchJoke(paymentHeader);
+  // Encode as X-PAYMENT header (Base64)
+  const paymentHeader = encodeBase64({
+    message,
+    signature,
+    wallet: account.address,
+  });
+
+  // 5️⃣ Retry with X-PAYMENT header
+  const paidResponse = await fetchJoke(`x402 ${paymentHeader}`);
 
   if (paidResponse.status !== 200) {
     const body = await safeJson(paidResponse);

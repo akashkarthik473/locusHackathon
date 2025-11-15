@@ -1,5 +1,9 @@
 #!/usr/bin/env node
-import { X402Buyer } from '@coinbase/x402';
+import { createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import {baseSepolia} from 'viem/chains';
+import fetch from 'node-fetch';
+import dotenv from 'dotenv';
 
 const API_URL = process.env.JOKE_API_URL ?? 'http://localhost:3000/joke';
 const userPrompt = process.argv.slice(2).join(' ') || 'tell me a joke';
@@ -17,6 +21,16 @@ async function main() {
     const errorBody = await safeJson(firstTry);
     throw new Error(`Unexpected response: ${firstTry.status} ${JSON.stringify(errorBody)}`);
   }
+
+  const challenge = await firstTry.json();
+  console.log('Payment required:', challenge.price);
+
+  const account = privateKeyToAccount(process.env.CDP_WALLET_PRIVATE_KEY);
+  const walletClient = createWalletClient({
+    account,
+    chain: baseSepolia,
+    transport: http(),
+  });
 
   // Parse 402 payment requirement
   const paymentRequirement = await firstTry.json();

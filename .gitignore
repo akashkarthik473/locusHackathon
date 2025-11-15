@@ -39,3 +39,4 @@ coverage/
 *.tmp
 *.swp
 *.swo
+backend/env.sample
